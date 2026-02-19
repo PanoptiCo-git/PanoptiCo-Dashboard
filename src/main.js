@@ -10,6 +10,10 @@ import Positions from './views/Positions.vue'
 import Portfolio from './views/Portfolio.vue'
 import './style.css'
 
+console.log('🚀 PanoptiCo Dashboard initializing...');
+console.log('📍 Base path:', '/PanoptiCo-Dashboard.github.io/');
+console.log('🔧 Environment:', import.meta.env.MODE);
+
 const routes = [
   { path: '/', component: Dashboard, name: 'Dashboard' },
   { path: '/timeline', component: Timeline, name: 'Timeline' },
@@ -28,3 +32,6 @@ const router = createRouter({
 const app = createApp(App)
 app.use(router)
 app.mount('#app')
+
+console.log('✅ App mounted successfully!');
+

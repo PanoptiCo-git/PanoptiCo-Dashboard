@@ -1,11 +1,22 @@
 import { createClient } from '@libsql/client'
 
+// 환경 변수 체크
+const dbUrl = import.meta.env.VITE_TURSO_DATABASE_URL;
+const dbToken = import.meta.env.VITE_TURSO_AUTH_TOKEN;
+
+if (!dbUrl || !dbToken) {
+  console.error('❌ Missing Turso environment variables!');
+  console.error('VITE_TURSO_DATABASE_URL:', dbUrl ? 'Set ✅' : 'Missing ❌');
+  console.error('VITE_TURSO_AUTH_TOKEN:', dbToken ? 'Set ✅' : 'Missing ❌');
+  console.error('Please check GitHub Secrets or .env file');
+}
+
 // Turso 직접 연결
 // 환경 변수는 백엔드 프로젝트의 .env 파일에서 관리됩니다
 // Vite가 자동으로 VITE_ 접두사가 있는 변수를 로드합니다
 const db = createClient({
-  url: import.meta.env.VITE_TURSO_DATABASE_URL,
-  authToken: import.meta.env.VITE_TURSO_AUTH_TOKEN,
+  url: dbUrl,
+  authToken: dbToken,
 })
 
 // 쿼리 헬퍼 함수
