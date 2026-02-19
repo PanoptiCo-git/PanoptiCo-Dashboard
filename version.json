@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "lastUpdate": "2026-02-14",
+  "changes": [
+    {
+      "version": "1.0.0",
+      "date": "2026-02-14",
+      "changes": [
+        "Initial release",
+        "Turso DB 직접 연결 구현",
+        "6개 페이지 구현 (Dashboard, News, Analyses, Trades, Positions, Portfolio)",
+        "다크 테마 적용",
+        "실시간 데이터 조회"
+      ]
+    }
+  ]
+}
+
