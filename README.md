@@ -1,10 +1,22 @@
 # PanoptiCo Dashboard
 
+![Version](https://img.shields.io/badge/version-1.0.3-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Node](https://img.shields.io/badge/node-20.x-brightgreen)
+![Vue](https://img.shields.io/badge/vue-3.x-brightgreen)
+
 암호화폐 자동매매 시스템 모니터링 대시보드
 
 ## 🎯 프로젝트 개요
 
 Mercauto 백엔드와 연동되는 실시간 모니터링 대시보드입니다. Turso 데이터베이스에서 거래 내역, 뉴스, AI 분석 결과를 조회하여 시각화합니다.
+
+### 📌 최신 버전
+- **버전**: v1.0.3
+- **업데이트**: 2026-02-21
+- **주요 변경**: 포지션/거래 로딩 에러 수정, API 리팩토링
+
+> 💡 **버전 확인**: 대시보드 우하단 버전 뱃지 클릭 → 전체 변경 이력 확인
 
 ## ✨ 주요 기능
 

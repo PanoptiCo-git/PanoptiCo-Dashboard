@@ -245,6 +245,100 @@ export default {
     } catch (error) {
       return { status: 'unhealthy', error: error.message }
     }
+  },
+
+  // 날짜 필터링 지원 (범용)
+  async queryWithDateFilter(baseQuery, params = [], startDate = null, endDate = null) {
+    let query = baseQuery;
+    const args = [...params];
+
+    if (startDate && endDate) {
+      query += (query.includes('WHERE') ? ' AND' : ' WHERE') + ' DATE(timestamp) BETWEEN ? AND ?';
+      args.push(startDate, endDate);
+    } else if (startDate) {
+      query += (query.includes('WHERE') ? ' AND' : ' WHERE') + ' DATE(timestamp) >= ?';
+      args.push(startDate);
+    } else if (endDate) {
+      query += (query.includes('WHERE') ? ' AND' : ' WHERE') + ' DATE(timestamp) <= ?';
+      args.push(endDate);
+    }
+
+    return await fetchAll(query, args);
+  },
+
+  // 포지션 (날짜 필터 지원)
+  async getPositionsFiltered(startDate = null, endDate = null, limit = 100) {
+    const baseQuery = 'SELECT * FROM positions';
+    const params = [];
+    let query = await this.queryWithDateFilter(baseQuery, params, startDate, endDate);
+    
+    // queryWithDateFilter는 배열을 반환하므로, 여기서 정렬 및 제한을 적용
+    const fullQuery = baseQuery + 
+      (startDate || endDate ? 
+        (startDate && endDate ? ' WHERE DATE(timestamp) BETWEEN ? AND ?' : 
+         startDate ? ' WHERE DATE(timestamp) >= ?' : ' WHERE DATE(timestamp) <= ?') 
+        : '') + 
+      ' ORDER BY timestamp DESC LIMIT ?';
+    
+    const args = [];
+    if (startDate && endDate) {
+      args.push(startDate, endDate);
+    } else if (startDate) {
+      args.push(startDate);
+    } else if (endDate) {
+      args.push(endDate);
+    }
+    args.push(limit);
+    
+    return await fetchAll(fullQuery, args);
+  },
+
+  // 거래 타임라인 데이터 (날짜 필터 지원)
+  async getTimelineData(startDate = null, endDate = null, limit = 100) {
+    const buildQuery = (table, where = '') => {
+      let q = `SELECT * FROM ${table}`;
+      const params = [];
+      
+      if (where) {
+        q += ` WHERE ${where}`;
+      }
+      
+      if (startDate && endDate) {
+        q += (where ? ' AND' : ' WHERE') + ' DATE(timestamp) BETWEEN ? AND ?';
+        params.push(startDate, endDate);
+      } else if (startDate) {
+        q += (where ? ' AND' : ' WHERE') + ' DATE(timestamp) >= ?';
+        params.push(startDate);
+      } else if (endDate) {
+        q += (where ? ' AND' : ' WHERE') + ' DATE(timestamp) <= ?';
+        params.push(endDate);
+      }
+      
+      q += ' ORDER BY timestamp DESC LIMIT ?';
+      params.push(limit);
+      
+      return { query: q, params };
+    };
+
+    try {
+      const newsQ = buildQuery('news_monitoring');
+      const analysisQ = buildQuery('llm_analysis');
+      const tradesQ = buildQuery('trade_orders');
+      const eventsQ = buildQuery('system_events', 'event_type IN ("trade_skip", "trade_error", "trade_simulation")');
+
+      const [news, analyses, trades, events] = await Promise.all([
+        fetchAll(newsQ.query, newsQ.params),
+        fetchAll(analysisQ.query, analysisQ.params),
+        fetchAll(tradesQ.query, tradesQ.params),
+        fetchAll(eventsQ.query, eventsQ.params)
+      ]);
+
+      return { news, analyses, trades, events };
+    } catch (error) {
+      console.error('Timeline data fetch error:', error);
+      throw error;
+    }
   }
 }
+
 
