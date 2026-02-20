@@ -324,16 +324,14 @@ export default {
       const newsQ = buildQuery('news_monitoring');
       const analysisQ = buildQuery('llm_analysis');
       const tradesQ = buildQuery('trade_orders');
-      const eventsQ = buildQuery('system_events', 'event_type IN ('trade_skip', 'trade_error', 'trade_simulation')');
 
-      const [news, analyses, trades, events] = await Promise.all([
+      const [news, analyses, trades] = await Promise.all([
         fetchAll(newsQ.query, newsQ.params),
         fetchAll(analysisQ.query, analysisQ.params),
-        fetchAll(tradesQ.query, tradesQ.params),
-        fetchAll(eventsQ.query, eventsQ.params)
+        fetchAll(tradesQ.query, tradesQ.params)
       ]);
 
-      return { news, analyses, trades, events };
+      return { news, analyses, trades };
     } catch (error) {
       console.error('Timeline data fetch error:', error);
       throw error;
