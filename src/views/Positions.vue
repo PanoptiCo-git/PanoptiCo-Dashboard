@@ -125,57 +125,26 @@ export default {
     async loadPositions() {
       try {
         this.loading = true;
+        this.error = null;
 
-        // 열린 포지션 (날짜 필터 없음)
-        this.openPositions = await this.fetchAll('SELECT * FROM positions WHERE status = "open" ORDER BY timestamp DESC', []);
+        // 열린 포지션 (api 모듈 사용)
+        this.openPositions = await api.getOpenPositions();
 
-        // 포지션 히스토리 (날짜 필터 적용)
-        let query = 'SELECT * FROM positions';
-        const params = [];
+        // 포지션 히스토리 (날짜 필터 지원)
+        this.positionHistory = await api.getPositionsFiltered(
+          this.startDate,
+          this.endDate,
+          100
+        );
 
-        if (this.startDate && this.endDate) {
-          query += ' WHERE DATE(timestamp) BETWEEN ? AND ?';
-          params.push(this.startDate, this.endDate);
-        } else if (this.startDate) {
-          query += ' WHERE DATE(timestamp) >= ?';
-          params.push(this.startDate);
-        } else if (this.endDate) {
-          query += ' WHERE DATE(timestamp) <= ?';
-          params.push(this.endDate);
-        }
-
-        query += ' ORDER BY timestamp DESC LIMIT 100';
-
-        this.positionHistory = await this.fetchAll(query, params);
-        this.loading = false
+        this.loading = false;
       } catch (err) {
-        this.error = '포지션을 불러오는데 실패했습니다.'
-        this.loading = false
-        console.error(err)
+        this.error = '포지션을 불러오는데 실패했습니다: ' + (err.message || err);
+        this.loading = false;
+        console.error('Load positions error:', err);
       }
     },
 
-    async fetchAll(query, params = []) {
-      try {
-        const { createClient } = await import('@libsql/client');
-        const db = createClient({
-          url: import.meta.env.VITE_TURSO_DATABASE_URL,
-          authToken: import.meta.env.VITE_TURSO_AUTH_TOKEN
-        });
-
-        const result = await db.execute({ sql: query, args: params });
-        return result.rows.map(row => {
-          const obj = {};
-          result.columns.forEach((col, idx) => {
-            obj[col] = row[idx];
-          });
-          return obj;
-        });
-      } catch (error) {
-        console.error('DB Query Error:', error);
-        throw error;
-      }
-    },
 
     formatDate(dateString) {
       if (!dateString) return '-'

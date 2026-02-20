@@ -139,6 +139,7 @@
 </template>
 
 <script>
+import api from '../api'
 import { format } from 'date-fns'
 import DateRangePicker from '../components/DateRangePicker.vue'
 
@@ -169,138 +170,60 @@ export default {
     async loadTimeline() {
       try {
         this.loading = true;
+        this.error = null;
 
-        // 모든 데이터 로드
-        const [news, analyses, trades, events] = await Promise.all([
-          this.loadNews(),
-          this.loadAnalyses(),
-          this.loadTrades(),
-          this.loadEvents()
-        ]);
+        // API 모듈의 getTimelineData 사용
+        const { news, analyses, trades, events } = await api.getTimelineData(
+          this.startDate,
+          this.endDate,
+          100
+        );
 
         // 타임라인으로 통합
-        this.timeline = this.mergeTimeline(news, analyses, trades, events);
+        const newsItems = news.map(item => ({
+          id: `news-${item.id}`,
+          type: 'news',
+          timestamp: item.timestamp,
+          data: item
+        }));
+
+        const analysisItems = analyses.map(item => ({
+          id: `analysis-${item.id}`,
+          type: 'analysis',
+          timestamp: item.timestamp,
+          data: item
+        }));
+
+        const tradeItems = trades.map(item => ({
+          id: `trade-${item.id}`,
+          type: 'trade',
+          timestamp: item.timestamp,
+          data: {
+            ...item,
+            executed: item.status !== 'skipped'
+          }
+        }));
+
+        const eventItems = events.map(item => ({
+          id: `event-${item.id}`,
+          type: 'event',
+          timestamp: item.timestamp,
+          data: item
+        }));
+
+        // 모든 항목을 시간순으로 정렬
+        const all = [...newsItems, ...analysisItems, ...tradeItems, ...eventItems];
+        this.timeline = all.sort((a, b) => {
+          const timeA = new Date(a.timestamp);
+          const timeB = new Date(b.timestamp);
+          return timeB - timeA; // 최신순
+        });
 
         this.loading = false;
       } catch (err) {
-        this.error = '타임라인을 불러오는데 실패했습니다.';
+        this.error = '타임라인을 불러오는데 실패했습니다: ' + (err.message || err);
         this.loading = false;
-        console.error(err);
-      }
-    },
-
-    async loadNews() {
-      let query = 'SELECT * FROM news_monitoring';
-      const params = [];
-
-      if (this.startDate && this.endDate) {
-        query += ' WHERE DATE(timestamp) BETWEEN ? AND ?';
-        params.push(this.startDate, this.endDate);
-      }
-
-      query += ' ORDER BY timestamp DESC LIMIT 100';
-
-      const results = await this.fetchAll(query, params);
-      return results.map(item => ({
-        id: `news-${item.id}`,
-        type: 'news',
-        timestamp: item.timestamp,
-        data: item
-      }));
-    },
-
-    async loadAnalyses() {
-      let query = 'SELECT * FROM llm_analysis';
-      const params = [];
-
-      if (this.startDate && this.endDate) {
-        query += ' WHERE DATE(timestamp) BETWEEN ? AND ?';
-        params.push(this.startDate, this.endDate);
-      }
-
-      query += ' ORDER BY timestamp DESC LIMIT 100';
-
-      const results = await this.fetchAll(query, params);
-      return results.map(item => ({
-        id: `analysis-${item.id}`,
-        type: 'analysis',
-        timestamp: item.timestamp,
-        data: item
-      }));
-    },
-
-    async loadTrades() {
-      let query = 'SELECT * FROM trade_orders';
-      const params = [];
-
-      if (this.startDate && this.endDate) {
-        query += ' WHERE DATE(timestamp) BETWEEN ? AND ?';
-        params.push(this.startDate, this.endDate);
-      }
-
-      query += ' ORDER BY timestamp DESC LIMIT 100';
-
-      const results = await this.fetchAll(query, params);
-      return results.map(item => ({
-        id: `trade-${item.id}`,
-        type: 'trade',
-        timestamp: item.timestamp,
-        data: {
-          ...item,
-          executed: item.status !== 'skipped'
-        }
-      }));
-    },
-
-    async loadEvents() {
-      let query = 'SELECT * FROM system_events WHERE event_type IN ("trade_skip", "trade_error", "trade_simulation")';
-      const params = [];
-
-      if (this.startDate && this.endDate) {
-        query += ' AND DATE(timestamp) BETWEEN ? AND ?';
-        params.push(this.startDate, this.endDate);
-      }
-
-      query += ' ORDER BY timestamp DESC LIMIT 100';
-
-      const results = await this.fetchAll(query, params);
-      return results.map(item => ({
-        id: `event-${item.id}`,
-        type: 'event',
-        timestamp: item.timestamp,
-        data: item
-      }));
-    },
-
-    mergeTimeline(news, analyses, trades, events) {
-      // 모든 항목을 시간순으로 정렬
-      const all = [...news, ...analyses, ...trades, ...events];
-      return all.sort((a, b) => {
-        const timeA = new Date(a.timestamp);
-        const timeB = new Date(b.timestamp);
-        return timeB - timeA; // 최신순
-      });
-    },
-
-    async fetchAll(query, params = []) {
-      try {
-        const { createClient } = await import('@libsql/client');
-        const db = createClient({
-          url: import.meta.env.VITE_TURSO_DATABASE_URL,
-          authToken: import.meta.env.VITE_TURSO_AUTH_TOKEN
-        });
-
-        const result = await db.execute({ sql: query, args: params });
-        return result.rows.map(row => {
-          const obj = {};
-          result.columns.forEach((col, idx) => {
-            obj[col] = row[idx];
-          });
-          return obj;
-        });
-      } catch (error) {
-        console.error('DB Query Error:', error);
-        throw error;
+        console.error('Load timeline error:', err);
       }
     },
 
