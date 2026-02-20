@@ -1,9 +1,18 @@
 {
-  "version": "1.0.5",
+  "version": "1.0.1",
   "lastUpdate": "2026-02-21",
   "changes": [
     {
-      "version": "1.0.3",
+      "version": "1.0.1",
+      "date": "2026-02-21",
+      "changes": [
+        "새 레포지토리 생성: PanoptiCo-Dashboard",
+        "vite.config.js base 경로 수정",
+        "프로젝트 이름 정리 및 일관성 확보",
+        "Node.js 20 사용",
+        "GitHub Actions 자동 배포 설정"
+      ]
+    },
       "date": "2026-02-21",
       "changes": [
         "포지션 로딩 에러 수정",
