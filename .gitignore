@@ -31,3 +31,5 @@ dist-ssr
 # Build output (commented for GitHub Pages manual deploy)
 # dist
 
+node_modules/.vite/deps/_metadata.json
+/dist

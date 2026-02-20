@@ -324,7 +324,7 @@ export default {
       const newsQ = buildQuery('news_monitoring');
       const analysisQ = buildQuery('llm_analysis');
       const tradesQ = buildQuery('trade_orders');
-      const eventsQ = buildQuery('system_events', 'event_type IN ("trade_skip", "trade_error", "trade_simulation")');
+      const eventsQ = buildQuery('system_events', 'event_type IN ('trade_skip', 'trade_error', 'trade_simulation')');
 
       const [news, analyses, trades, events] = await Promise.all([
         fetchAll(newsQ.query, newsQ.params),
