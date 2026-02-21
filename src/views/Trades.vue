@@ -173,7 +173,7 @@ export default {
         this.error = null;
 
         // API 모듈의 getTimelineData 사용
-        const { news, analyses, trades, events } = await api.getTimelineData(
+        const { news, analyses, trades } = await api.getTimelineData(
           this.startDate,
           this.endDate,
           100
@@ -204,15 +204,8 @@ export default {
           }
         }));
 
-        const eventItems = events.map(item => ({
-          id: `event-${item.id}`,
-          type: 'event',
-          timestamp: item.timestamp,
-          data: item
-        }));
-
         // 모든 항목을 시간순으로 정렬
-        const all = [...newsItems, ...analysisItems, ...tradeItems, ...eventItems];
+        const all = [...newsItems, ...analysisItems, ...tradeItems];
         this.timeline = all.sort((a, b) => {
           const timeA = new Date(a.timestamp);
           const timeB = new Date(b.timestamp);
