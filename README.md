@@ -5,7 +5,7 @@
 ![Node](https://img.shields.io/badge/node-20.x-brightgreen)
 ![Vue](https://img.shields.io/badge/vue-3.x-brightgreen)
 
-암호화폐 자동매매 시스템 모니터링 대시보드
+암호화폐 자동매매 시스템 모니터링 대시보드 - 실시간 포트폴리오 추적
 
 ## 🚀 배포 정보
 - **URL**: https://panoptico-git.github.io/PanoptiCo-Dashboard/
