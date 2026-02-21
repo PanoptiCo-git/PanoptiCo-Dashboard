@@ -33,3 +33,5 @@ dist-ssr
 
 node_modules/.vite/deps/_metadata.json
 /dist
+/node_modules
+/dist
