@@ -3,7 +3,7 @@
     <nav class="navbar">
       <div class="container">
         <router-link to="/" class="navbar-brand">
-          📊 Crypto Trading Dashboard
+          📊 PanoptiCo
         </router-link>
         <ul class="navbar-nav">
           <li><router-link to="/" class="nav-link">대시보드</router-link></li>

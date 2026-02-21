@@ -94,7 +94,7 @@ npm run build
 ## 📁 프로젝트 구조
 
 ```
-PanoptiCo-Dashboard/
+PanoptiCo/
 ├── src/
 │   ├── views/
 │   │   ├── Portfolio.vue      # 포트폴리오 화면
