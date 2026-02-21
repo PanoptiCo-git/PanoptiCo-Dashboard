@@ -173,6 +173,7 @@ export default {
         this.error = null;
 
         // API 모듈의 getTimelineData 사용
+        // Fixed: Removed events destructuring to prevent undefined errors
         const { news, analyses, trades } = await api.getTimelineData(
           this.startDate,
           this.endDate,

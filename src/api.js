@@ -294,6 +294,7 @@ export default {
   },
 
   // 거래 타임라인 데이터 (날짜 필터 지원)
+  // Fixed: Removed system_events query to prevent trade_skip errors
   async getTimelineData(startDate = null, endDate = null, limit = 100) {
     const buildQuery = (table, where = '') => {
       let q = `SELECT * FROM ${table}`;
