@@ -136,7 +136,7 @@ export default {
     return await fetchOne(query, [id])
   },
 
-  // 포트폴리오
+  // 포트폴리오 (선물 계좌 기준)
   async getLatestPortfolio() {
     const query = `
       SELECT * FROM portfolio_snapshots
@@ -155,13 +155,11 @@ export default {
     return await fetchAll(query, [limit])
   },
 
-  // 통계
+  // 통계 (선물 기준 - pnl은 positions 테이블 기준)
   async getTradingStats() {
-    // 총 거래 횟수
     const totalTradesResult = await fetchOne(`SELECT COUNT(*) as total FROM trade_orders`)
     const total_trades = totalTradesResult?.total || 0
 
-    // 매수/매도 횟수
     const sideResults = await fetchAll(`
       SELECT side, COUNT(*) as count
       FROM trade_orders
@@ -170,14 +168,12 @@ export default {
     const buy_count = sideResults.find(r => r.side === 'buy')?.count || 0
     const sell_count = sideResults.find(r => r.side === 'sell')?.count || 0
 
-    // 총 손익
     const pnlStats = await fetchOne(`
       SELECT SUM(pnl) as total_pnl, AVG(pnl_percent) as avg_pnl_percent
       FROM positions
       WHERE status = 'closed'
     `)
 
-    // 승률
     const winRateData = await fetchOne(`
       SELECT
         SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) as wins,
@@ -339,5 +335,3 @@ export default {
     }
   }
 }
-
-
