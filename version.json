@@ -1,15 +1,17 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "lastUpdate": "2026-02-23",
   "changes": [
     {
-      "version": "1.0.4",
+      "version": "1.0.5",
       "date": "2026-02-23",
       "changes": [
-        "선물(USDT-M Futures) 계좌 기준으로 전환",
-        "포트폴리오: BTC보유량/가치 → 에쿼티/지갑잔고/미실현PnL",
-        "포지션: buy/sell → 롱/숏, 레버리지 컬럼 추가, 미실현손익 표시",
-        "대시보드: 선물 계좌 요약, 롱/숏 방향 표시, 레버리지 표시"
+        "Turso DB 잘못된 open positions 13개 삭제",
+        "Turso DB portfolio_snapshots 0 잔고 레코드 삭제",
+        "trading_database: Turso portfolio 저장 메서드명 수정 (log_portfolio → log_portfolio_snapshot)",
+        "trading_database: open_position/close_position Turso 저장 추가",
+        "binance_trading: 선물 계좌 잔고 파싱 강화 (totalWalletBalance/availableBalance)",
+        "Dashboard: portfolio null 시 안전 표시, 열린 포지션 수 실시간 카운트로 수정"
       ]
     },
     {

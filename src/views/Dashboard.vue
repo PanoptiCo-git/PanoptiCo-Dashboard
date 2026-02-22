@@ -10,30 +10,37 @@
 
     <div v-else>
       <!-- 선물 계좌 요약 -->
-      <div v-if="summary.portfolio" class="grid grid-4">
+      <div class="grid grid-4">
         <div class="stat-card">
           <div class="stat-label">💼 에쿼티</div>
-          <div class="stat-value">${{ formatNumber(summary.portfolio.total_balance) }}</div>
+          <div class="stat-value">
+            {{ summary.portfolio ? '$' + formatNumber(summary.portfolio.total_balance) : '-' }}
+          </div>
           <div class="stat-info">지갑잔고 + 미실현 손익</div>
         </div>
 
         <div class="stat-card">
           <div class="stat-label">💵 가용 잔고</div>
-          <div class="stat-value">${{ formatNumber(summary.portfolio.free_balance) }}</div>
+          <div class="stat-value">
+            {{ summary.portfolio ? '$' + formatNumber(summary.portfolio.free_balance) : '-' }}
+          </div>
           <div class="stat-info">주문 가능 USDT</div>
         </div>
 
         <div class="stat-card">
           <div class="stat-label">📊 미실현 손익</div>
-          <div class="stat-value" :class="(summary.portfolio.total_pnl || 0) >= 0 ? 'positive' : 'negative'">
-            {{ (summary.portfolio.total_pnl || 0) >= 0 ? '+' : '' }}${{ formatNumber(Math.abs(summary.portfolio.total_pnl || 0)) }}
+          <div class="stat-value"
+               :class="summary.portfolio && (summary.portfolio.total_pnl || 0) >= 0 ? 'positive' : 'negative'">
+            {{ summary.portfolio
+              ? ((summary.portfolio.total_pnl || 0) >= 0 ? '+' : '') + '$' + formatNumber(Math.abs(summary.portfolio.total_pnl || 0))
+              : '-' }}
           </div>
           <div class="stat-info">열린 포지션 기준</div>
         </div>
 
         <div class="stat-card">
           <div class="stat-label">📌 열린 포지션</div>
-          <div class="stat-value">{{ summary.portfolio.open_positions_count }}</div>
+          <div class="stat-value">{{ summary.open_positions.length }}</div>
         </div>
       </div>
 

@@ -205,8 +205,13 @@ export default {
     const open_positions = await this.getOpenPositions()
     const recent_trades = await this.getTrades(null, 5)
 
+    // portfolio가 없거나 잔고가 0이면 open_positions 기준으로 카운트 보정
+    const portfolioData = portfolio
+      ? { ...portfolio, open_positions_count: open_positions.length }
+      : null
+
     return {
-      portfolio,
+      portfolio: portfolioData,
       stats,
       open_positions,
       recent_trades
