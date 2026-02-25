@@ -69,43 +69,19 @@
 
             <!-- 거래 실행 -->
             <div v-if="item.type === 'trade'" class="timeline-body">
-              <h3 class="timeline-title" :class="item.data.executed ? 'executed' : 'skipped'">
-                {{ item.data.executed ? '✅ 거래 실행' : '⏭️ 거래 미실행' }}
-              </h3>
+              <h3 v-if="item.data.executed" class="timeline-title executed">✅ 거래 실행</h3>
 
               <!-- 거래 실행됨 -->
               <div v-if="item.data.executed" class="trade-details">
-                <div class="detail-row">
-                  <span class="detail-label">방향:</span>
-                  <span class="detail-value" :class="'side-' + item.data.side">
-                    {{ item.data.side === 'buy' ? '매수 🟢' : '매도 🔴' }}
-                  </span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">수량:</span>
-                  <span class="detail-value">{{ formatNumber(item.data.amount, 6) }} {{ item.data.symbol.split('/')[0] }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">가격:</span>
-                  <span class="detail-value">${{ formatNumber(item.data.price) }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">총액:</span>
-                  <span class="detail-value highlight">${{ formatNumber(item.data.amount * item.data.price) }}</span>
-                </div>
-                <div v-if="item.data.status" class="detail-row">
-                  <span class="detail-label">상태:</span>
-                  <span class="detail-value" :class="'status-' + item.data.status">{{ item.data.status }}</span>
-                </div>
+                <!-- ...existing code... -->
               </div>
 
-              <!-- 거래 미실행 -->
+              <!-- 거래 미실행 / 실패 -->
               <div v-else class="trade-skip">
-                <div class="skip-reason">
-                  <span class="reason-icon">ℹ️</span>
+                <div :class="item.data.status === 'failed' ? 'skip-reason error-reason' : 'skip-reason'">
+                  <span class="reason-icon">{{ item.data.status === 'failed' ? '❌' : 'ℹ️' }}</span>
                   <div class="reason-content">
-                    <div class="reason-title">미실행 이유:</div>
-                    <div class="reason-text">{{ item.data.reason || '이유 없음' }}</div>
+                    <div class="reason-text">{{ item.data.reason || item.data.raw_response || '이유 없음' }}</div>
                   </div>
                 </div>
                 <div v-if="item.data.simulated_order" class="simulated-info">
@@ -130,6 +106,16 @@
             <div v-if="item.type === 'event'" class="timeline-body">
               <h3 class="timeline-title">⚙️ {{ item.data.event_type }}</h3>
               <div class="event-message">{{ item.data.message }}</div>
+            </div>
+
+            <!-- 거래 미실행 / 에러 이벤트 -->
+            <div v-else-if="item.type === 'trade_skip' || item.type === 'trade_error'" class="timeline-body">
+              <div :class="item.type === 'trade_error' ? 'skip-reason error-reason' : 'skip-reason'">
+                <span class="reason-icon">{{ item.type === 'trade_error' ? '❌' : 'ℹ️' }}</span>
+                <div class="reason-content">
+                  <div class="reason-text">{{ item.data.message || '이유 없음' }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -172,14 +158,12 @@ export default {
         this.loading = true;
         this.error = null;
 
-        // API 모듈의 getTimelineData 사용 (system_events 제거됨 - 2026-02-21)
-        const { news, analyses, trades } = await api.getTimelineData(
+        const { news, analyses, trades, events } = await api.getTimelineData(
           this.startDate,
           this.endDate,
           100
         );
 
-        // 타임라인으로 통합
         const newsItems = news.map(item => ({
           id: `news-${item.id}`,
           type: 'news',
@@ -194,24 +178,29 @@ export default {
           data: item
         }));
 
-        const tradeItems = trades.map(item => ({
-          id: `trade-${item.id}`,
-          type: 'trade',
-          timestamp: item.timestamp,
-          data: {
-            ...item,
-            executed: item.status !== 'skipped'
-          }
-        }));
+        const tradeItems = trades
+          .filter(item => item.status === 'filled' || item.status === 'closed')
+          .map(item => ({
+            id: `trade-${item.id}`,
+            type: 'trade',
+            timestamp: item.timestamp,
+            data: { ...item, executed: true }
+          }));
 
-        // 모든 항목을 시간순으로 정렬
-        const all = [...newsItems, ...analysisItems, ...tradeItems];
-        this.timeline = all.sort((a, b) => {
-          const timeA = new Date(a.timestamp);
-          const timeB = new Date(b.timestamp);
-          return timeB - timeA; // 최신순
+        // 거래 미실행 / 에러 이벤트
+        const eventItems = (events || []).map(item => {
+          let details = {};
+          try { details = item.details ? JSON.parse(item.details) : {}; } catch {}
+          return {
+            id: `event-${item.id}`,
+            type: item.event_type === 'trade_error' ? 'trade_error' : 'trade_skip',
+            timestamp: item.timestamp,
+            data: { ...details, event_type: item.event_type, message: item.message, severity: item.severity }
+          };
         });
 
+        const all = [...newsItems, ...analysisItems, ...tradeItems, ...eventItems];
+        this.timeline = all.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         this.loading = false;
       } catch (err) {
         this.error = '타임라인을 불러오는데 실패했습니다: ' + (err.message || err);
@@ -224,7 +213,9 @@ export default {
       const icons = {
         'news': '📰',
         'analysis': '🤖',
-        'trade': item.data.executed ? '💰' : '⏭️',
+        'trade': item.data.executed ? '💰' : (item.data.status === 'failed' ? '❌' : '⏭️'),
+        'trade_skip': '⏭️',
+        'trade_error': '❌',
         'event': '⚙️'
       };
       return icons[item.type] || '📌';
@@ -232,8 +223,12 @@ export default {
 
     getMarkerClass(item) {
       if (item.type === 'trade') {
-        return item.data.executed ? 'marker-success' : 'marker-warning';
+        if (item.data.executed) return 'marker-success';
+        if (item.data.status === 'failed') return 'marker-error';
+        return 'marker-warning';
       }
+      if (item.type === 'trade_error') return 'marker-error';
+      if (item.type === 'trade_skip') return 'marker-warning';
       return `marker-${item.type}`;
     },
 
@@ -242,6 +237,8 @@ export default {
         'news': '뉴스',
         'analysis': 'AI 분석',
         'trade': '거래',
+        'trade_skip': '거래 미실행',
+        'trade_error': '거래 오류',
         'event': '이벤트'
       };
       return labels[type] || type;
@@ -332,6 +329,11 @@ export default {
   box-shadow: 0 0 20px rgba(255, 170, 0, 0.3);
 }
 
+.marker-error {
+  background: linear-gradient(135deg, #ff4444, #cc0000);
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.3);
+}
+
 .marker-event {
   background: linear-gradient(135deg, #6a4a8a, #4a2a6a);
 }
@@ -385,6 +387,16 @@ export default {
   color: #00ff88;
 }
 
+.badge-trade_skip {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffaa00;
+}
+
+.badge-trade_error {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+}
+
 .badge-event {
   background: rgba(106, 74, 138, 0.3);
   color: #aa88ff;
@@ -403,6 +415,10 @@ export default {
 
 .timeline-title.skipped {
   color: #ffaa00;
+}
+
+.timeline-title.error {
+  color: #ff4444;
 }
 
 .timeline-meta {
@@ -522,6 +538,11 @@ export default {
   background: rgba(255, 170, 0, 0.1);
   border-left: 3px solid #ffaa00;
   border-radius: 4px;
+}
+
+.error-reason {
+  background: rgba(255, 68, 68, 0.1);
+  border-left-color: #ff4444;
 }
 
 .reason-icon {

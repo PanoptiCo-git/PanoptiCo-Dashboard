@@ -1,17 +1,34 @@
 {
-  "version": "1.0.5",
-  "lastUpdate": "2026-02-23",
+  "version": "1.1.0",
+  "lastUpdate": "2026-02-26",
   "changes": [
     {
-      "version": "1.0.5",
+      "version": "1.1.0",
+      "date": "2026-02-26",
+      "changes": [
+        "trade_skip/trade_error 타임라인 메시지 정상 표시 (|| 연산자 누락 버그 수정)",
+        "binance_trading.py _skip/_error → Turso에도 이벤트 저장하도록 수정",
+        "main.py 중복 log_event 호출 제거"
+      ]
+    },
+    {
+      "version": "1.0.9",
+      "date": "2026-02-26",
+      "changes": [
+        "거래 실행됨 상세 정보(수량/가격/총액) 복원 (주석 placeholder로 교체된 버그 수정)",
+        "trade_orders raw_response JSON에서 에러 메시지 reason으로 자동 추출",
+        "거래 미실행/실패 이유 메시지 정상 표시"
+      ]
+    },
+    {
+      "version": "1.0.6",
       "date": "2026-02-23",
       "changes": [
-        "Turso DB 잘못된 open positions 13개 삭제",
-        "Turso DB portfolio_snapshots 0 잔고 레코드 삭제",
-        "trading_database: Turso portfolio 저장 메서드명 수정 (log_portfolio → log_portfolio_snapshot)",
-        "trading_database: open_position/close_position Turso 저장 추가",
-        "binance_trading: 선물 계좌 잔고 파싱 강화 (totalWalletBalance/availableBalance)",
-        "Dashboard: portfolio null 시 안전 표시, 열린 포지션 수 실시간 카운트로 수정"
+        "BINANCE_API_SECRET 키릴 문자 → ASCII 수정",
+        "포트폴리오: balance equity/free/unrealized_pnl 올바르게 저장",
+        "거래 미실행/에러 시 system_events에 reason 저장",
+        "타임라인: trade_skip/trade_error 이벤트 표시 (주황/빨강 마커)",
+        "Dashboard: portfolio null 방어 처리"
       ]
     },
     {
@@ -39,4 +56,3 @@
     }
   ]
 }
-

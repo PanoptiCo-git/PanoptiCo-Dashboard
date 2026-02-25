@@ -300,11 +300,7 @@ export default {
     const buildQuery = (table, where = '') => {
       let q = `SELECT * FROM ${table}`;
       const params = [];
-      
-      if (where) {
-        q += ` WHERE ${where}`;
-      }
-      
+      if (where) q += ` WHERE ${where}`;
       if (startDate && endDate) {
         q += (where ? ' AND' : ' WHERE') + ' DATE(timestamp) BETWEEN ? AND ?';
         params.push(startDate, endDate);
@@ -315,25 +311,27 @@ export default {
         q += (where ? ' AND' : ' WHERE') + ' DATE(timestamp) <= ?';
         params.push(endDate);
       }
-      
       q += ' ORDER BY timestamp DESC LIMIT ?';
       params.push(limit);
-      
       return { query: q, params };
     };
 
     try {
-      const newsQ = buildQuery('news_monitoring');
+      const newsQ     = buildQuery('news_monitoring');
       const analysisQ = buildQuery('llm_analysis');
-      const tradesQ = buildQuery('trade_orders');
+      const tradesQ   = buildQuery('trade_orders');
+      // trade_skip(미실행) + trade_error(오류) 이벤트
+      const eventsWhere = `event_type IN ('trade_skip','trade_error','trade_simulation')`;
+      const eventsQ   = buildQuery('system_events', eventsWhere);
 
-      const [news, analyses, trades] = await Promise.all([
+      const [news, analyses, trades, events] = await Promise.all([
         fetchAll(newsQ.query, newsQ.params),
         fetchAll(analysisQ.query, analysisQ.params),
-        fetchAll(tradesQ.query, tradesQ.params)
+        fetchAll(tradesQ.query, tradesQ.params),
+        fetchAll(eventsQ.query, eventsQ.params).catch(() => [])
       ]);
 
-      return { news, analyses, trades };
+      return { news, analyses, trades, events };
     } catch (error) {
       console.error('Timeline data fetch error:', error);
       throw error;
