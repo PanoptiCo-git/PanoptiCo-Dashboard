@@ -141,12 +141,11 @@
             <h3>거래 실행</h3>
           </div>
           <div class="section-content">
-            <p class="no-data-text">
-              거래 미실행
-              <span v-if="item.analysis.confidence < 0.6" class="reason">
-                (신뢰도 부족: {{ (item.analysis.confidence * 100).toFixed(1) }}%)
-              </span>
-            </p>
+            <div v-if="item.skipReason" :class="item.skipType === 'error' ? 'error-reason-box' : 'skip-reason-box'">
+              <span class="skip-icon">{{ item.skipType === 'error' ? '❌' : '⏸️' }}</span>
+              <span class="skip-text">{{ item.skipReason }}</span>
+            </div>
+            <p v-else class="no-data-text">거래 미실행 <span class="no-reason-hint">(신규 이벤트부터 이유 기록됨)</span></p>
           </div>
         </div>
       </div>
@@ -202,7 +201,6 @@ export default {
         this.loading = true;
         this.error = null;
 
-        // 최근 뉴스 조회 (날짜 필터 적용)
         let query = 'SELECT * FROM news_monitoring';
         const params = [];
 
@@ -216,41 +214,107 @@ export default {
           query += ' WHERE DATE(timestamp) <= ?';
           params.push(this.endDate);
         }
-
         query += ' ORDER BY timestamp DESC LIMIT 50';
 
         const newsList = await this.fetchAll(query, params);
 
+        // trade_skip/trade_error 이벤트 한번에 로드
+        const skipEvents = await this.fetchAll(
+          "SELECT event_type, message, details, timestamp FROM system_events WHERE event_type IN ('trade_skip','trade_error','trade_exception') ORDER BY timestamp DESC LIMIT 500"
+        );
+
+        // trade_orders skipped/failed 한번에 로드
+        const skipOrders = await this.fetchAll(
+          "SELECT analysis_id, reason, status, timestamp FROM trade_orders WHERE status IN ('skipped','failed') ORDER BY timestamp DESC LIMIT 500"
+        );
+
         const timeline = [];
 
         for (const news of newsList) {
-          const newsId = news.id;
-
-          // 해당 뉴스의 분석 조회
-          const analysisQuery = `
-            SELECT * FROM llm_analysis
-            WHERE news_id = ?
-            ORDER BY timestamp DESC
-            LIMIT 1
-          `;
-          const analysisResult = await this.fetchOne(analysisQuery, [newsId]);
+          const analysisResult = await this.fetchOne(
+            'SELECT * FROM llm_analysis WHERE news_id = ? ORDER BY timestamp DESC LIMIT 1',
+            [news.id]
+          );
 
           let trades = [];
+          let skipReason = null;
+          let skipType = null; // 'skip' or 'error'
+
           if (analysisResult) {
-            // 해당 분석의 거래 조회
-            const tradesQuery = `
-              SELECT * FROM trade_orders
-              WHERE analysis_id = ?
-              ORDER BY timestamp DESC
-            `;
-            trades = await this.fetchAll(tradesQuery, [analysisResult.id]);
+            // 체결된 거래 조회
+            const allTrades = await this.fetchAll(
+              'SELECT * FROM trade_orders WHERE analysis_id = ? ORDER BY timestamp DESC',
+              [analysisResult.id]
+            );
+            trades = allTrades.filter(t => t.status === 'filled' || t.status === 'closed');
+
+            if (trades.length === 0) {
+              const aTs = new Date(analysisResult.timestamp).getTime();
+
+              // 1) analysis_id로 직접 연결된 skipped/failed
+              const directSkip = skipOrders.find(o => String(o.analysis_id) === String(analysisResult.id));
+              if (directSkip && directSkip.reason) {
+                skipReason = directSkip.reason;
+                skipType = directSkip.status === 'failed' ? 'error' : 'skip';
+              } else {
+                // 2) 타임스탬프 ±10분 내 trade_orders skipped (기존 데이터 NULL analysis_id 대응)
+                const nearSkip = skipOrders.find(o => {
+                  const diff = Math.abs(new Date(o.timestamp).getTime() - aTs);
+                  return diff <= 10 * 60 * 1000;
+                });
+                if (nearSkip && nearSkip.reason) {
+                  skipReason = nearSkip.reason;
+                  skipType = nearSkip.status === 'failed' ? 'error' : 'skip';
+                } else {
+                  // 3) 타임스탬프 ±10분 내 system_events trade_skip/trade_error
+                  const nearEvt = skipEvents.find(e => {
+                    const diff = Math.abs(new Date(e.timestamp).getTime() - aTs);
+                    return diff <= 10 * 60 * 1000;
+                  });
+                  if (nearEvt) {
+                    // message 우선, 없으면 details JSON에서 추출
+                    let evtMsg = nearEvt.message;
+                    if (!evtMsg && nearEvt.details) {
+                      try {
+                        const det = JSON.parse(nearEvt.details);
+                        evtMsg = det.error || det.message || det.traceback?.split('\n').pop() || JSON.stringify(det);
+                      } catch {}
+                    }
+                    if (evtMsg) {
+                      skipReason = evtMsg;
+                      skipType = nearEvt.event_type === 'trade_error' || nearEvt.event_type === 'trade_exception' ? 'error' : 'skip';
+                    }
+                  } else {
+                    // 4) analysis 결과에서 이유 추론
+                    const conf = analysisResult.confidence;
+                    const decision = analysisResult.decision;
+                    if (conf !== null && conf < 0.6) {
+                      skipReason = `신뢰도 미달 (confidence=${(conf*100).toFixed(0)}% < 60%)`;
+                      skipType = 'skip';
+                    } else if (decision === 'hold' || decision === 'none' || decision === 'neutral') {
+                      skipReason = `AI 판단: 거래 불필요 (decision=${decision})`;
+                      skipType = 'skip';
+                    }
+                    // 디버그: 이유를 못 찾은 경우 콘솔에 상세 정보 출력
+                    if (!skipReason) {
+                      console.warn('[PanoptiCo] skipReason 미확인:', {
+                        analysisId: analysisResult.id,
+                        analysisTs: analysisResult.timestamp,
+                        decision: analysisResult.decision,
+                        confidence: analysisResult.confidence,
+                        skipOrdersCount: skipOrders.length,
+                        skipEventsCount: skipEvents.length,
+                        nearestSkipOrder: skipOrders.slice(0,3).map(o => ({id:o.analysis_id, ts:o.timestamp, reason:o.reason})),
+                        nearestSkipEvent: skipEvents.slice(0,3).map(e => ({ts:e.timestamp, msg:e.message})),
+                      });
+                    }
+                  }
+                }
+              }
+            }
           }
 
-          timeline.push({
-            news,
-            analysis: analysisResult,
-            trades
-          });
+          timeline.push({ news, analysis: analysisResult, trades, skipReason, skipType });
         }
 
         this.timeline = timeline;
@@ -652,6 +716,47 @@ export default {
 .no-data-text .reason {
   font-size: 0.9em;
   color: #7f8c8d;
+}
+
+.skip-reason-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255, 170, 0, 0.12);
+  border-left: 3px solid #ffaa00;
+  border-radius: 6px;
+}
+
+.skip-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.skip-text {
+  color: #e0c97f;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.error-reason-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(231, 76, 60, 0.12);
+  border-left: 3px solid #e74c3c;
+  border-radius: 6px;
+}
+
+.error-reason-box .skip-text {
+  color: #e87c6f;
+}
+
+.no-reason-hint {
+  font-size: 0.82em;
+  color: #6c7a7d;
+  font-style: normal;
 }
 
 /* 연결선 */

@@ -109,11 +109,11 @@
             </div>
 
             <!-- 거래 미실행 / 에러 이벤트 -->
-            <div v-else-if="item.type === 'trade_skip' || item.type === 'trade_error'" class="timeline-body">
+            <div v-if="item.type === 'trade_skip' || item.type === 'trade_error'" class="timeline-body">
               <div :class="item.type === 'trade_error' ? 'skip-reason error-reason' : 'skip-reason'">
                 <span class="reason-icon">{{ item.type === 'trade_error' ? '❌' : 'ℹ️' }}</span>
                 <div class="reason-content">
-                  <div class="reason-text">{{ item.data.message || '이유 없음' }}</div>
+                  <div class="reason-text">{{ item.data.reason || item.data.message || '이유 없음' }}</div>
                 </div>
               </div>
             </div>
@@ -187,19 +187,30 @@ export default {
             data: { ...item, executed: true }
           }));
 
-        // 거래 미실행 / 에러 이벤트
-        const eventItems = (events || []).map(item => {
+        // trade_orders skipped/failed → 타임라인에 reason과 함께 표시
+        const tradeSkipItems = trades
+          .filter(item => item.status === 'skipped' || item.status === 'failed')
+          .map(item => ({
+            id: `trade-skip-${item.id}`,
+            type: item.status === 'failed' ? 'trade_error' : 'trade_skip',
+            timestamp: item.timestamp,
+            data: { reason: item.reason || '이유 없음', message: item.reason || '이유 없음', status: item.status }
+          }));
+
+        // system_events 기반 (trade_orders에 없는 경우만 - 중복 방지)
+        const skipTimestamps = new Set(tradeSkipItems.map(i => i.timestamp));
+        const eventItems = (events || []).filter(item => !skipTimestamps.has(item.timestamp)).map(item => {
           let details = {};
           try { details = item.details ? JSON.parse(item.details) : {}; } catch {}
           return {
             id: `event-${item.id}`,
             type: item.event_type === 'trade_error' ? 'trade_error' : 'trade_skip',
             timestamp: item.timestamp,
-            data: { ...details, event_type: item.event_type, message: item.message, severity: item.severity }
+            data: { ...details, event_type: item.event_type, reason: item.message, message: item.message, severity: item.severity }
           };
         });
 
-        const all = [...newsItems, ...analysisItems, ...tradeItems, ...eventItems];
+        const all = [...newsItems, ...analysisItems, ...tradeItems, ...tradeSkipItems, ...eventItems];
         this.timeline = all.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         this.loading = false;
       } catch (err) {

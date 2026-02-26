@@ -1,7 +1,95 @@
 {
-  "version": "1.1.0",
-  "lastUpdate": "2026-02-26",
+  "version": "1.1.9",
+  "lastUpdate": "2026-02-27",
   "changes": [
+    {
+      "version": "1.1.9",
+      "date": "2026-02-27",
+      "changes": [
+        "binance_trading.py: execute_market_order에 turso_analysis_id 파라미터 추가, Turso 저장 시 FK 제약 충족",
+        "turso_logger.py: log_trade_order FK 제약 실패 시 analysis_id=None으로 자동 재시도",
+        "binance_trading.py: execute_trade_from_agent_analysis → execute_market_order에 turso_analysis_id 전달"
+      ]
+    },
+    {
+      "version": "1.1.8",
+      "date": "2026-02-27",
+      "changes": [
+        "main.py: 사전 필터(is_investable/confidence 체크) 제거 → 항상 execute_trade_from_agent_analysis()로 위임해 상세 이유 기록",
+        "binance_trading.py: is_investable=False 메시지에 AI reasoning/bias/confidence/risk_factors 포함",
+        "binance_trading.py: confidence/perceived_impact 미달 메시지에 AI 근거 포함",
+        "binance_trading.py: 현재가 조회 실패 시 실제 에러 메시지(_last_price_error) 포함",
+        "binance_trading.py: execute_market_order 실패 시 실제 에러(_last_order_error) 포함",
+        "binance_trading.py: 최상위 예외도 Turso에 failed 기록",
+        "Timeline.vue: skipEvents 쿼리에 details 컬럼 추가, message 없을 때 details.error에서 fallback",
+        "Timeline.vue: trade_exception 이벤트도 에러 박스로 표시"
+      ]
+    },
+    {
+      "version": "1.1.7",
+      "date": "2026-02-27",
+      "changes": [
+        "turso_logger.py: last_insert_rowid()=0 반환 시 MAX(id) fallback 추가 (news/llm_analysis/trade_orders)",
+        "binance_trading.py: dry_run 케이스에서도 Turso에 skipped 기록 (이유 포함)",
+        "binance_trading.py: 주문 실패(order=None) 케이스도 Turso에 failed 기록",
+        "Timeline.vue: skipReason 못 찾을 때 콘솔에 상세 디버그 정보 출력 (warn)"
+      ]
+    },
+    {
+      "version": "1.1.6",
+      "date": "2026-02-26",
+      "changes": [
+        "main.py: Turso에 news+analysis 먼저 저장 → turso_analysis_id 획득 후 거래 실행에 전달 (analysis_id 미스매치 근본 해결)",
+        "main.py: 조건 미달 스킵 시에도 Turso trade_orders에 skipped 저장 (이유 포함)",
+        "binance_trading.py: execute_trade_from_agent_analysis에 turso_analysis_id 파라미터 추가",
+        "binance_trading.py: _skip()/_error()에서 Turso 저장 시 turso_analysis_id 우선 사용",
+        "Timeline.vue: skipType(skip/error) 추가 → 에러는 빨간박스, 스킵은 주황박스 구분",
+        "Timeline.vue: 폴백 시간범위 ±5분 → ±10분 확장, skipEvents에 event_type 컬럼 추가",
+        "Timeline.vue: 4단계 폴백 추가 - analysis confidence/decision으로 이유 추론",
+        "Timeline.vue: 이유 없는 경우 '(이유 없음)' → '(신규 이벤트부터 이유 기록됨)' 힌트 표시"
+      ]
+    },
+    {
+      "version": "1.1.5",
+      "date": "2026-02-26",
+      "changes": [
+        "Timeline.vue: SQL datetime 쿼리 제거, JS에서 ±5분 타임스탬프 매칭으로 skipReason 조회",
+        "skipEvents/skipOrders 한번에 로드 후 JS find()로 매칭 (Turso datetime 함수 호환성 문제 해결)"
+      ]
+    },
+    {
+      "version": "1.1.4",
+      "date": "2026-02-26",
+      "changes": [
+        "Timeline.vue: analysis_id=NULL 기존 데이터도 타임스탬프 ±5분으로 trade_orders/system_events에서 skipReason 조회",
+        "거래 미실행 이유 3단계 폴백: analysis_id → 시간범위 trade_orders → 시간범위 system_events"
+      ]
+    },
+    {
+      "version": "1.1.3",
+      "date": "2026-02-26",
+      "changes": [
+        "Timeline.vue: 거래 미실행 시 trade_orders reason 표시 (analysis_id 연결)",
+        "binance_trading.py: _skip()/_error() analysis_id=None → 실제 값으로 수정"
+      ]
+    },
+    {
+      "version": "1.1.2",
+      "date": "2026-02-26",
+      "changes": [
+        "trade_skip/trade_error v-else-if → v-if 수정 (렌더링 누락 버그)",
+        "binance_trading _skip/_error에서 Turso trade_orders에도 저장",
+        "거래 미실행 reason 타임라인 정상 표시"
+      ]
+    },
+    {
+      "version": "1.1.1",
+      "date": "2026-02-26",
+      "changes": [
+        "trade_orders skipped/failed 항목을 타임라인에 직접 표시",
+        "거래 미실행/실패 reason 필드 타임라인에 표시"
+      ]
+    },
     {
       "version": "1.1.0",
       "date": "2026-02-26",
