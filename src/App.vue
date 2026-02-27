@@ -8,9 +8,6 @@
         <ul class="navbar-nav">
           <li><router-link to="/" class="nav-link">대시보드</router-link></li>
           <li><router-link to="/timeline" class="nav-link">📊 타임라인</router-link></li>
-          <li><router-link to="/news" class="nav-link">뉴스</router-link></li>
-          <li><router-link to="/analyses" class="nav-link">분석</router-link></li>
-          <li><router-link to="/trades" class="nav-link">거래</router-link></li>
           <li><router-link to="/positions" class="nav-link">포지션</router-link></li>
           <li><router-link to="/portfolio" class="nav-link">포트폴리오</router-link></li>
         </ul>

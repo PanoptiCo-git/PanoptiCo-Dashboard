@@ -1,7 +1,47 @@
 {
-  "version": "1.1.9",
+  "version": "1.2.2",
   "lastUpdate": "2026-02-27",
   "changes": [
+    {
+      "version": "1.2.2",
+      "date": "2026-02-27",
+      "changes": [
+        "헤더 메뉴에서 뉴스, 분석, 거래 항목 제거 (대시보드, 타임라인, 포지션, 포트폴리오만 유지)"
+      ]
+    },
+    {
+      "version": "1.2.1",
+      "date": "2026-02-27",
+      "changes": [
+        "속도 최적화: Turso DB 저장을 매매 이후 백그라운드로 이동 (0.5초 절약)",
+        "속도 최적화: execute_trade_from_agent_analysis를 asyncio.to_thread로 감싸 event loop 비차단",
+        "속도 최적화: get_current_price + get_balance를 ThreadPoolExecutor로 동시 호출 (0.3~0.5초 절약)",
+        "calculate_position_size에 available_usdt 파라미터 추가로 중복 잔고 조회 제거",
+        "각 단계별 소요시간 로그 출력 (GPT/매매/총합)"
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "date": "2026-02-27",
+      "changes": [
+        "binance_trading.py: 로컬 SQLite(TradingDatabase) 완전 제거, Turso 단일화",
+        "execute_trade_from_agent_analysis: db.save_news/save_llm_analysis 제거 (main.py에서 이미 Turso 저장)",
+        "_skip/_error: 로컬 SQLite 저장 제거, Turso만 사용",
+        "execute_market_order: SQLite trade_order/position 저장 제거, Turso만 사용",
+        "get_balance: SQLite portfolio snapshot 제거, Turso만 사용",
+        "close_position: SQLite db.close_position 제거, Turso만 사용",
+        "ID 불일치 버그 근본 해결: 로컬 SQLite ID가 Turso에 전달되는 경우 원천 차단"
+      ]
+    },
+    {
+      "version": "1.1.10",
+      "date": "2026-02-27",
+      "changes": [
+        "binance_trading.py: close_position() 청산 성공 시 Turso positions도 closed 업데이트",
+        "main.py: _close_all_positions_on_exit() finally 블록에서 Turso 전체 포지션 강제 closed 처리",
+        "turso_logger.py: close_position_by_symbol(), close_all_positions() 메서드 추가"
+      ]
+    },
     {
       "version": "1.1.9",
       "date": "2026-02-27",
