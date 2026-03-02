@@ -246,7 +246,9 @@ export default {
               'SELECT * FROM trade_orders WHERE analysis_id = ? ORDER BY timestamp DESC',
               [analysisResult.id]
             );
-            trades = allTrades.filter(t => t.status === 'filled' || t.status === 'closed');
+            // 체결된 거래 조회 (ccxt status: filled, closed, open, new 모두 포함)
+            const EXECUTED_STATUSES = new Set(['filled', 'closed', 'open', 'new', 'partially_filled']);
+            trades = allTrades.filter(t => EXECUTED_STATUSES.has(t.status));
 
             if (trades.length === 0) {
               const aTs = new Date(analysisResult.timestamp).getTime();
